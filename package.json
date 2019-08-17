@@ -1,0 +1,16 @@
+{
+  "name": "schmervice-methods",
+  "version": "0.0.1",
+  "description": "experimental",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "npm t"
+  },
+  "author": "Samuel Joli",
+  "license": "ISC",
+  "devDependencies": {
+    "@hapi/hapi": "18.3.2",
+    "@hapi/lab": "20.1.0",
+    "chai": "4.2.0"
+  }
+}
