@@ -1,5 +1,6 @@
 'use strict';
 
+const Promise = require('bluebird');
 const hapi = require('@hapi/hapi');
 const lab = require('@hapi/lab');
 
@@ -112,6 +113,44 @@ describe('Plugin', () => {
             server.registerServiceMethods(service);
 
             server.methods.sqs.init();
+        });
+
+        it('accepts an optional cache config object', async () => {
+            const calls = [];
+            const server = hapi.Server();
+            const service = {
+                scope: 'sqs',
+                services: [
+                    {
+                        name: 'init',
+                        async service(input) {
+                            calls.push(input);
+                            return input;
+                        },
+                        cache: {
+                            expiresIn: 100,
+                            generateTimeout: 2,
+                        },
+                    },
+                ],
+            };
+            await server.register(plugin);
+
+            server.registerServiceMethods(service);
+
+            await server.initialize();
+
+            // call method twice and assert that it's called once
+            await server.methods.sqs.init(true);
+            await server.methods.sqs.init(true);
+
+            calls.length.should.equal(1);
+
+            // allow cache to expire and call once more
+            await Promise.delay(100);
+            await server.methods.sqs.init(true);
+
+            calls.length.should.equal(2);
         });
     });
 
