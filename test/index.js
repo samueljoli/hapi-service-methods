@@ -2,9 +2,11 @@
 
 const hapi = require('@hapi/hapi');
 const lab = require('@hapi/lab');
+const chaiAsPromised = require('chai-as-promised');
 
 const { script, assertions } = lab;
 const { describe, it } = exports.lab = script();
+assertions.use(chaiAsPromised);
 assertions.should();
 
 const plugin = require('..');
@@ -17,6 +19,66 @@ describe('Plugin', () => {
 
         await server.register(plugin);
         server.registerServiceMethods.should.be.a('function');
+    });
+
+    it('adds serviceScopeMap to server.app once registered and can not be reassigned', async () => {
+        const server = hapi.Server();
+        (server.app.serviceScopeMap === undefined).should.equal(true);
+        await server.register(plugin);
+        server.app.serviceScopeMap.should.exist;
+
+        const subject = async () => {
+            server.app.serviceScopeMap = true;
+        };
+        subject().should.be.rejectedWith(Error, 'Cannot assign to read only property \'serviceScopeMap\'');
+    });
+
+    it('allows you to register plugin multiple times', async () => {
+        const pluginOne = {
+            pkg: { name: 'pluginOne' },
+            async register(server) {
+                const service = {
+                    scope: 'blue',
+                    services: [
+                        {
+                            name: 'one',
+                            method: () => true,
+                        },
+                    ],
+                };
+                await server.register(plugin);
+
+                server.registerServiceMethods(service);
+            },
+        };
+        const pluginTwo = {
+            pkg: { name: 'pluginTwo' },
+            async register(server) {
+                const service = {
+                    scope: 'red',
+                    services: [
+                        {
+                            name: 'one',
+                            method: () => true,
+                        },
+                    ],
+                };
+                await server.register(plugin);
+
+                server.registerServiceMethods(service);
+            },
+        };
+        const subject = async () => {
+            const server = hapi.Server();
+
+            await server.register(pluginOne);
+            await server.register(pluginTwo);
+
+            server.methods.blue.should.exist;
+            server.methods.red.should.exist;
+        };
+
+        await subject().should.be.fulfilled;
     });
 
     describe('.registerServiceMethods()', () => {
@@ -282,5 +344,51 @@ describe('Plugin', () => {
         (() => {
             server.registerServiceMethods(service2);
         }).should.throw(Error, 'A service scope of thing already exists');
+    });
+
+    it('throws when separate plugins attempt to register services that have the same scope', async () => {
+        const mainServer = hapi.Server();
+        const pluginOne = {
+            pkg: {
+                name: 'pluginOne',
+            },
+            register(server) {
+                const service = {
+                    scope: 'blue',
+                    services: [
+                        {
+                            name: 'one',
+                            method: () => true,
+                        },
+                    ],
+                };
+                server.registerServiceMethods(service);
+            },
+        };
+        const pluginTwo = {
+            pkg: {
+                name: 'pluginTwo',
+            },
+            register(server) {
+                const service = {
+                    scope: 'blue',
+                    services: [
+                        {
+                            name: 'two',
+                            method: () => true,
+                        },
+                    ],
+                };
+                server.registerServiceMethods(service);
+            },
+        };
+
+        const subject = async () => {
+            await mainServer.register(plugin);
+            await mainServer.register(pluginOne);
+            await mainServer.register(pluginTwo);
+        };
+
+        return subject().should.be.rejectedWith(Error, 'A service scope of blue already exists');
     });
 });
