@@ -16,7 +16,6 @@
     "@hapi/hapi": "18.3.2",
     "@hapi/lab": "20.1.0",
     "@hapi/rule-scope-start": "2.2.0",
-    "bluebird": "3.5.5",
     "chai": "4.2.0",
     "eslint": "6.1.0",
     "eslint-config-airbnb-base": "14.0.0",

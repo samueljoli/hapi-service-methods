@@ -1,6 +1,5 @@
 'use strict';
 
-const Promise = require('bluebird');
 const hapi = require('@hapi/hapi');
 const lab = require('@hapi/lab');
 
@@ -21,14 +20,14 @@ describe('Plugin', () => {
     });
 
     describe('.registerServiceMethods()', () => {
-        it('accepts a single object argument and register methods to server under correct scope', async () => {
+        it('accepts a single object argument and registers methods to server under correct scope', async () => {
             const server = hapi.Server();
             const service = {
                 scope: 'sqs',
                 services: [
                     {
                         name: 'init',
-                        service: () => 'hello',
+                        method: () => 'hello',
                     },
                 ],
             };
@@ -47,7 +46,7 @@ describe('Plugin', () => {
                     services: [
                         {
                             name: 'init',
-                            service: () => 'hello',
+                            method: () => 'hello',
                         },
                     ],
                 },
@@ -56,7 +55,7 @@ describe('Plugin', () => {
                     services: [
                         {
                             name: 'init',
-                            service: () => 'hello',
+                            method: () => 'hello',
                         },
                     ],
                 },
@@ -76,7 +75,7 @@ describe('Plugin', () => {
                 services: [
                     {
                         name: 'init',
-                        service() {
+                        method() {
                             this.server.should.be.an('object');
                         },
                     },
@@ -95,18 +94,18 @@ describe('Plugin', () => {
             const server = hapi.Server();
             const service = {
                 scope: 'sqs',
+                context: {
+                    client: new SQS(),
+                },
                 services: [
                     {
                         name: 'init',
-                        service() {
+                        method() {
                             this.client.should.be.an('object');
                             this.client.should.be.an.instanceOf(SQS);
                         },
                     },
                 ],
-                context: {
-                    client: new SQS(),
-                },
             };
             await server.register(plugin);
 
@@ -123,7 +122,7 @@ describe('Plugin', () => {
                 services: [
                     {
                         name: 'init',
-                        async service(input) {
+                        async method(input) {
                             calls.push(input);
                             return input;
                         },
@@ -147,7 +146,9 @@ describe('Plugin', () => {
             calls.length.should.equal(1);
 
             // allow cache to expire and call once more
-            await Promise.delay(100);
+            await new Promise((resolve) => {
+                setTimeout(resolve, 100);
+            });
             await server.methods.sqs.init(true);
 
             calls.length.should.equal(2);
@@ -161,7 +162,7 @@ describe('Plugin', () => {
                 services: [
                     {
                         name: 'init',
-                        service: () => 'hello',
+                        method: () => 'hello',
                     },
                 ],
             },
@@ -187,14 +188,14 @@ describe('Plugin', () => {
         }).should.throw(Error, '"services" is required');
     });
 
-    it('throws when service name  is not provided', async () => {
+    it('throws when service name is not provided', async () => {
         const server = hapi.Server();
         const services = [
             {
                 scope: 'scope',
                 services: [
                     {
-                        service: () => 'hello',
+                        method: () => 'hello',
                     },
                 ],
             },
@@ -222,6 +223,64 @@ describe('Plugin', () => {
 
         (() => {
             server.registerServiceMethods(services);
-        }).should.throw(Error, '"service" is required');
+        }).should.throw(Error, '"method" is required');
+    });
+
+    it('throws when trying to register services that have the same scope when using array argument', async () => {
+        const server = hapi.Server();
+        const services = [
+            {
+                scope: 'thing',
+                services: [
+                    {
+                        name: 'one',
+                        method: () => true,
+                    },
+                ],
+            },
+            {
+                scope: 'thing',
+                services: [
+                    {
+                        name: 'two',
+                        method: () => true,
+                    },
+                ],
+            },
+        ];
+        await server.register(plugin);
+
+        (() => {
+            server.registerServiceMethods(services);
+        }).should.throw(Error, 'A service scope of thing already exists');
+    });
+
+    it('throws when trying to register serices that have the same scope when using object argument', async () => {
+        const server = hapi.Server();
+        const service1 = {
+            scope: 'thing',
+            services: [
+                {
+                    name: 'one',
+                    method: () => true,
+                },
+            ],
+        };
+        const service2 = {
+            scope: 'thing',
+            services: [
+                {
+                    name: 'two',
+                    method: () => true,
+                },
+            ],
+        };
+        await server.register(plugin);
+
+        server.registerServiceMethods(service1);
+
+        (() => {
+            server.registerServiceMethods(service2);
+        }).should.throw(Error, 'A service scope of thing already exists');
     });
 });
