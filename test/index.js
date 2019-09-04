@@ -55,7 +55,8 @@ describe('Plugin', () => {
             method: 'GET',
             path: '/test',
             handler(request, h) {
-                return h.services.should.be.a('function');
+                h.services.should.be.a('function');
+                return h.services();
             },
         });
         const request = {
@@ -297,6 +298,82 @@ describe('Plugin', () => {
             await server.methods.sqs.init(true);
 
             calls.length.should.equal(2);
+        });
+    });
+
+    describe('.services()', () => {
+        it('can return services registered by plugin or all registered services when passed truthy boolen', async () => {
+            const server = hapi.Server();
+            await server.register(plugin);
+            const pluginOne = {
+                pkg: { name: 'pluginOne' },
+                async register(srv) {
+                    const service = {
+                        scope: 'blue',
+                        services: [
+                            {
+                                name: 'one',
+                                method: () => true,
+                            },
+                        ],
+                    };
+                    srv.registerServiceMethods(service);
+
+                    srv.route({
+                        method: 'GET',
+                        path: '/test2',
+                        handler(request) {
+                            request.services().should.have.keys(['blue']);
+                            request.services(true).should.have.keys(['blue', 'red']);
+                            return { ok: true };
+                        },
+                    });
+                },
+            };
+            const pluginTwo = {
+                pkg: { name: 'pluginTwo' },
+                async register(srv) {
+                    const service = {
+                        scope: 'red',
+                        services: [
+                            {
+                                name: 'one',
+                                method: () => true,
+                            },
+                        ],
+                    };
+                    srv.registerServiceMethods(service);
+
+                    srv.route({
+                        method: 'GET',
+                        path: '/test',
+                        handler(request) {
+                            request.services().should.have.keys(['red']);
+                            request.services(true).should.have.keys(['red', 'blue']);
+                            return { ok: true };
+                        },
+                    });
+                },
+            };
+            await server.register({
+                plugin: pluginOne,
+                options: { key: 'value' },
+            });
+            await server.register({
+                plugin: pluginTwo,
+                options: { key2: 'value2' },
+            });
+            const request = {
+                method: 'GET',
+                url: '/test',
+            };
+            const request2 = {
+                method: 'GET',
+                url: '/test2',
+            };
+
+            await server.inject(request);
+            await server.inject(request2);
         });
     });
 
