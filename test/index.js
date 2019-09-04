@@ -30,6 +30,42 @@ describe('Plugin', () => {
         server.services.should.be.a('function');
     });
 
+    it('decorates request interface with services() util', async () => {
+        const server = hapi.Server();
+        await server.register(plugin);
+        server.route({
+            method: 'GET',
+            path: '/test',
+            handler(request) {
+                return request.services.should.be.a('function');
+            },
+        });
+        const request = {
+            method: 'GET',
+            url: '/test',
+        };
+
+        await server.inject(request);
+    });
+
+    it('decorates toolkit interface with services() util', async () => {
+        const server = hapi.Server();
+        await server.register(plugin);
+        server.route({
+            method: 'GET',
+            path: '/test',
+            handler(request, h) {
+                return h.services.should.be.a('function');
+            },
+        });
+        const request = {
+            method: 'GET',
+            url: '/test',
+        };
+
+        await server.inject(request);
+    });
+
     it('adds serviceScopeMap to server.realm once registered and can not be reassigned', async () => {
         const server = hapi.Server();
         (server.app.serviceScopeMap === undefined).should.equal(true);
