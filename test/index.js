@@ -14,12 +14,20 @@ const plugin = require('..');
 
 describe('Plugin', () => {
 
-    it('decorates server interface with registerServiceMethods util', async () => {
+    it('decorates server interface with registerServiceMethods() util', async () => {
         const server = hapi.Server();
         (server.registerServiceMethods === undefined).should.equal(true);
 
         await server.register(plugin);
         server.registerServiceMethods.should.be.a('function');
+    });
+
+    it('decorates server interface with services() util', async () => {
+        const server = hapi.Server();
+        (server.services === undefined).should.equal(true);
+
+        await server.register(plugin);
+        server.services.should.be.a('function');
     });
 
     it('adds serviceScopeMap to server.realm once registered and can not be reassigned', async () => {
@@ -75,9 +83,10 @@ describe('Plugin', () => {
 
             await server.register(pluginOne);
             await server.register(pluginTwo);
+            const services = server.services();
 
-            server.methods.blue.should.exist;
-            server.methods.red.should.exist;
+            services.blue.one.should.exist;
+            services.red.one.should.exist;
         };
 
         await subject().should.be.fulfilled;
@@ -99,7 +108,9 @@ describe('Plugin', () => {
 
             server.registerServiceMethods(service);
 
-            server.methods.sqs.init.should.be.a('function');
+            const services = server.services();
+
+            services.sqs.init.should.be.a('function');
         });
 
         it('accepts a single array of objects and registers methods to server under correct scope', async () => {
@@ -128,8 +139,10 @@ describe('Plugin', () => {
 
             server.registerServiceMethods(services);
 
-            server.methods.sqs.init.should.be.a('function');
-            server.methods.rabbitMq.init.should.be.a('function');
+            const { sqs, rabbitMq } = server.services();
+
+            sqs.init.should.be.a('function');
+            rabbitMq.init.should.be.a('function');
         });
 
         it('by default binds hapi server to "this" context', async () => {
@@ -149,7 +162,9 @@ describe('Plugin', () => {
 
             server.registerServiceMethods(service);
 
-            server.methods.sqs.init();
+            const { sqs } = server.services();
+
+            sqs.init();
         });
 
         it('accepts an optional context property which will be used to bind to "this" context in server methods', async () => {
@@ -175,7 +190,9 @@ describe('Plugin', () => {
 
             server.registerServiceMethods(service);
 
-            server.methods.sqs.init();
+            const { sqs } = server.services();
+
+            sqs.init();
         });
 
         it('accepts an optional cache config object', async () => {
