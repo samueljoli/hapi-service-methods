@@ -117,8 +117,14 @@ describe('Plugin', () => {
         const subject = async () => {
             const server = hapi.Server();
 
-            await server.register(pluginOne);
-            await server.register(pluginTwo);
+            await server.register({
+                plugin: pluginOne,
+                options: { key: 'value' },
+            });
+            await server.register({
+                plugin: pluginTwo,
+                options: { key2: 'value2' },
+            });
             const services = server.services();
 
             services.blue.one.should.exist;
@@ -190,6 +196,28 @@ describe('Plugin', () => {
                         name: 'init',
                         method() {
                             this.server.should.be.an('object');
+                        },
+                    },
+                ],
+            };
+            await server.register(plugin);
+
+            server.registerServiceMethods(service);
+
+            const { sqs } = server.services();
+
+            sqs.init();
+        });
+
+        it('by default binds the options of the registering plugin to the "this" context', async () => {
+            const server = hapi.Server();
+            const service = {
+                scope: 'sqs',
+                services: [
+                    {
+                        name: 'init',
+                        method() {
+                            this.options.should.be.an('object');
                         },
                     },
                 ],
