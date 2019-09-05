@@ -1,6 +1,5 @@
 'use strict';
 
-const Toys = require('toys');
 const hapi = require('@hapi/hapi');
 const lab = require('@hapi/lab');
 const chaiAsPromised = require('chai-as-promised');
@@ -65,19 +64,6 @@ describe('Plugin', () => {
         };
 
         await server.inject(request);
-    });
-
-    it('adds serviceScopeMap to server.realm once registered and can not be reassigned', async () => {
-        const server = hapi.Server();
-        (server.app.serviceScopeMap === undefined).should.equal(true);
-        await server.register(plugin);
-        const rootRealm = Toys.rootRealm(server.realm);
-        rootRealm.plugins[plugin.pkg.name].serviceScopeMap.should.exist;
-
-        const subject = async () => {
-            rootRealm.plugins[plugin.pkg.name].serviceScopeMap = false;
-        };
-        subject().should.be.rejectedWith(Error, 'Cannot assign to read only property \'serviceScopeMap\'');
     });
 
     it('allows you to register plugin multiple times', async () => {
