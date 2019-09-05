@@ -288,6 +288,50 @@ describe('Plugin', () => {
     });
 
     describe('.services()', () => {
+        it('makes services available to plugins that do not explicitly register plugin', async () => {
+            let services;
+            const server = hapi.Server();
+            const pluginA = {
+                pkg: { name: 'pluginA' },
+                async register(srv) {
+                    const service = {
+                        scope: 'first',
+                        services: [
+                            {
+                                name: 'method',
+                                method: () => true,
+                            },
+                        ],
+                    };
+                    srv.register(plugin);
+                    srv.registerServiceMethods(service);
+                },
+            };
+            const pluginB = {
+                pkg: { name: 'pluginB' },
+                async register(srv) {
+                    srv.register(pluginA);
+                    srv.route({
+                        method: 'GET',
+                        path: '/test',
+                        handler(request) {
+                            services = request.services();
+                            return { ok: true };
+                        },
+                    });
+                },
+            };
+            const request = {
+                method: 'GET',
+                url: '/test',
+            };
+            server.register(pluginB);
+
+            await server.inject(request);
+
+            services.should.have.keys(['first']);
+        });
+
         it('can return services registered by plugin or all registered services when passed truthy boolen', async () => {
             const server = hapi.Server();
             await server.register(plugin);
