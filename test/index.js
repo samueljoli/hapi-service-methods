@@ -3,6 +3,7 @@
 const hapi = require('@hapi/hapi');
 const lab = require('@hapi/lab');
 const chaiAsPromised = require('chai-as-promised');
+const pkg = require('../package.json');
 
 const { script, assertions } = lab;
 const { describe, it } = exports.lab = script();
@@ -13,7 +14,7 @@ const plugin = require('..');
 
 describe('Plugin', () => {
 
-    it('decorates server interface with registerServiceMethods() util', async () => {
+    it('decorates hapi server interface with registerServiceMethods() util', async () => {
         const server = hapi.Server();
         (server.registerServiceMethods === undefined).should.equal(true);
 
@@ -21,7 +22,7 @@ describe('Plugin', () => {
         server.registerServiceMethods.should.be.a('function');
     });
 
-    it('decorates server interface with services() util', async () => {
+    it('decorates hapi server interface with services() util', async () => {
         const server = hapi.Server();
         (server.services === undefined).should.equal(true);
 
@@ -29,7 +30,7 @@ describe('Plugin', () => {
         server.services.should.be.a('function');
     });
 
-    it('decorates request interface with services() util', async () => {
+    it('decorates hapi request interface with services() util', async () => {
         const server = hapi.Server();
         await server.register(plugin);
         server.route({
@@ -47,7 +48,7 @@ describe('Plugin', () => {
         await server.inject(request);
     });
 
-    it('decorates toolkit interface with services() util', async () => {
+    it('decorates hapi toolkit interface with services() util', async () => {
         const server = hapi.Server();
         await server.register(plugin);
         server.route({
@@ -66,7 +67,7 @@ describe('Plugin', () => {
         await server.inject(request);
     });
 
-    it('allows you to register plugin multiple times', async () => {
+    it('can be registered multiple times', async () => {
         const pluginOne = {
             pkg: { name: 'pluginOne' },
             async register(server) {
@@ -122,7 +123,7 @@ describe('Plugin', () => {
     });
 
     describe('.registerServiceMethods()', () => {
-        it('accepts a single object argument and registers methods to server under correct scope', async () => {
+        it('accepts a single object argument and registers services to server under correct scope', async () => {
             const server = hapi.Server();
             const service = {
                 scope: 'sqs',
@@ -142,7 +143,7 @@ describe('Plugin', () => {
             services.sqs.init.should.be.a('function');
         });
 
-        it('accepts a single array of objects and registers methods to server under correct scope', async () => {
+        it('accepts a single array of objects and registers services to server under correct scope', async () => {
             const server = hapi.Server();
             const services = [
                 {
@@ -174,121 +175,7 @@ describe('Plugin', () => {
             rabbitMq.init.should.be.a('function');
         });
 
-        it('by default binds hapi server to "this" context', async () => {
-            const server = hapi.Server();
-            const service = {
-                scope: 'sqs',
-                services: [
-                    {
-                        name: 'init',
-                        method() {
-                            this.server.should.be.an('object');
-                        },
-                    },
-                ],
-            };
-            await server.register(plugin);
-
-            server.registerServiceMethods(service);
-
-            const { sqs } = server.services();
-
-            sqs.init();
-        });
-
-        it('by default binds the options of the registering plugin to the "this" context', async () => {
-            const server = hapi.Server();
-            const service = {
-                scope: 'sqs',
-                services: [
-                    {
-                        name: 'init',
-                        method() {
-                            this.options.should.be.an('object');
-                        },
-                    },
-                ],
-            };
-            await server.register(plugin);
-
-            server.registerServiceMethods(service);
-
-            const { sqs } = server.services();
-
-            sqs.init();
-        });
-
-        it('accepts an optional context property which will be used to bind to "this" context in server methods', async () => {
-            class SQS {}
-
-            const server = hapi.Server();
-            const service = {
-                scope: 'sqs',
-                context: {
-                    client: new SQS(),
-                },
-                services: [
-                    {
-                        name: 'init',
-                        method() {
-                            this.client.should.be.an('object');
-                            this.client.should.be.an.instanceOf(SQS);
-                        },
-                    },
-                ],
-            };
-            await server.register(plugin);
-
-            server.registerServiceMethods(service);
-
-            const { sqs } = server.services();
-
-            sqs.init();
-        });
-
-        it('accepts an optional cache config object', async () => {
-            const calls = [];
-            const server = hapi.Server();
-            const service = {
-                scope: 'sqs',
-                services: [
-                    {
-                        name: 'init',
-                        async method(input) {
-                            calls.push(input);
-                            return input;
-                        },
-                        cache: {
-                            expiresIn: 100,
-                            generateTimeout: 2,
-                        },
-                    },
-                ],
-            };
-            await server.register(plugin);
-
-            server.registerServiceMethods(service);
-
-            await server.initialize();
-
-            // call method twice and assert that it's called once
-            await server.methods.sqs.init(true);
-            await server.methods.sqs.init(true);
-
-            calls.length.should.equal(1);
-
-            // allow cache to expire and call once more
-            await new Promise((resolve) => {
-                setTimeout(resolve, 100);
-            });
-            await server.methods.sqs.init(true);
-
-            calls.length.should.equal(2);
-        });
-    });
-
-    describe('.services()', () => {
-        it('makes services available to plugins that do not explicitly register plugin', async () => {
+        it('binds services up the entire realm chain', async (flags) => {
             let services;
             const server = hapi.Server();
             const pluginA = {
@@ -330,9 +217,125 @@ describe('Plugin', () => {
             await server.inject(request);
 
             services.should.have.keys(['first']);
+
+            flags.note(`Services will be made available to a plugin that does not register ${pkg.name} but registers a plugin that registers ${pkg.name}.`);
         });
 
-        it('can return services registered by plugin or all registered services when passed truthy boolen', async () => {
+        it('binds hapi server to service context', async () => {
+            const server = hapi.Server();
+            const service = {
+                scope: 'sqs',
+                services: [
+                    {
+                        name: 'init',
+                        method() {
+                            this.server.should.be.an('object');
+                        },
+                    },
+                ],
+            };
+            await server.register(plugin);
+
+            server.registerServiceMethods(service);
+
+            const { sqs } = server.services();
+
+            sqs.init();
+        });
+
+        it('binds plugin options to service context', async () => {
+            const server = hapi.Server();
+            const service = {
+                scope: 'sqs',
+                services: [
+                    {
+                        name: 'init',
+                        method() {
+                            this.options.should.be.an('object');
+                        },
+                    },
+                ],
+            };
+            await server.register(plugin);
+
+            server.registerServiceMethods(service);
+
+            const { sqs } = server.services();
+
+            sqs.init();
+        });
+
+        it('accepts an optional context config which will be bound to service context when passed in (config.context)', async () => {
+            class SQS {}
+
+            const server = hapi.Server();
+            const service = {
+                scope: 'sqs',
+                context: {
+                    client: new SQS(),
+                },
+                services: [
+                    {
+                        name: 'init',
+                        method() {
+                            this.client.should.be.an('object');
+                            this.client.should.be.an.instanceOf(SQS);
+                        },
+                    },
+                ],
+            };
+            await server.register(plugin);
+
+            server.registerServiceMethods(service);
+
+            const { sqs } = server.services();
+
+            sqs.init();
+        });
+
+        it('service objects accept an optional cache config object (config.services.cache)', async () => {
+            const calls = [];
+            const server = hapi.Server();
+            const service = {
+                scope: 'sqs',
+                services: [
+                    {
+                        name: 'init',
+                        async method(input) {
+                            calls.push(input);
+                            return input;
+                        },
+                        cache: {
+                            expiresIn: 100,
+                            generateTimeout: 2,
+                        },
+                    },
+                ],
+            };
+            await server.register(plugin);
+
+            server.registerServiceMethods(service);
+
+            await server.initialize();
+
+            // call method twice and assert that it's called once
+            await server.methods.sqs.init(true);
+            await server.methods.sqs.init(true);
+
+            calls.length.should.equal(1);
+
+            // allow cache to expire and call once more
+            await new Promise((resolve) => {
+                setTimeout(resolve, 100);
+            });
+            await server.methods.sqs.init(true);
+
+            calls.length.should.equal(2);
+        });
+    });
+
+    describe('.services()', () => {
+        it('by default only returns services defined by registering plugin', async () => {
             const server = hapi.Server();
             await server.register(plugin);
             const pluginOne = {
@@ -354,7 +357,6 @@ describe('Plugin', () => {
                         path: '/test2',
                         handler(request) {
                             request.services().should.have.keys(['blue']);
-                            request.services(true).should.have.keys(['blue', 'red']);
                             return { ok: true };
                         },
                     });
@@ -379,6 +381,77 @@ describe('Plugin', () => {
                         path: '/test',
                         handler(request) {
                             request.services().should.have.keys(['red']);
+                            return { ok: true };
+                        },
+                    });
+                },
+            };
+            await server.register({
+                plugin: pluginOne,
+                options: { key: 'value' },
+            });
+            await server.register({
+                plugin: pluginTwo,
+                options: { key2: 'value2' },
+            });
+            const request = {
+                method: 'GET',
+                url: '/test',
+            };
+            const request2 = {
+                method: 'GET',
+                url: '/test2',
+            };
+
+            await server.inject(request);
+            await server.inject(request2);
+        });
+
+        it('returns all services defined up the entire realm chain when passed a truthy boolean argument', async () => {
+            const server = hapi.Server();
+            await server.register(plugin);
+            const pluginOne = {
+                pkg: { name: 'pluginOne' },
+                async register(srv) {
+                    const service = {
+                        scope: 'blue',
+                        services: [
+                            {
+                                name: 'one',
+                                method: () => true,
+                            },
+                        ],
+                    };
+                    srv.registerServiceMethods(service);
+
+                    srv.route({
+                        method: 'GET',
+                        path: '/test2',
+                        handler(request) {
+                            request.services(true).should.have.keys(['blue', 'red']);
+                            return { ok: true };
+                        },
+                    });
+                },
+            };
+            const pluginTwo = {
+                pkg: { name: 'pluginTwo' },
+                async register(srv) {
+                    const service = {
+                        scope: 'red',
+                        services: [
+                            {
+                                name: 'one',
+                                method: () => true,
+                            },
+                        ],
+                    };
+                    srv.registerServiceMethods(service);
+
+                    srv.route({
+                        method: 'GET',
+                        path: '/test',
+                        handler(request) {
                             request.services(true).should.have.keys(['red', 'blue']);
                             return { ok: true };
                         },
