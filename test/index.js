@@ -335,7 +335,7 @@ describe('Plugin', () => {
     });
 
     describe('.services()', () => {
-        it('by default only returns services defined by registering plugin', async () => {
+        it('by default returns services defined by registering plugin', async () => {
             const server = hapi.Server();
             await server.register(plugin);
             const pluginOne = {
@@ -478,6 +478,72 @@ describe('Plugin', () => {
             await server.inject(request);
             await server.inject(request2);
         });
+    });
+
+    it('runs initialize() onPreStart and teardown() onPostStop (Object argument)', async () => {
+        let initialized = false;
+        let toredown = false;
+        const server = hapi.Server();
+        await server.register(plugin);
+        const service = {
+            scope: 'sqs',
+            services: [
+                {
+                    name: 'initialize',
+                    method() {
+                        initialized = true;
+                    },
+                },
+                {
+                    name: 'teardown',
+                    method() {
+                        toredown = true;
+                    },
+                },
+            ],
+        };
+        server.registerServiceMethods(service);
+
+        await server.initialize();
+
+        await server.stop();
+
+        initialized.should.equal(true);
+        toredown.should.equal(true);
+    });
+
+    it('runs initialize() onPreStart and teardown() onPostStop (Array argument)', async () => {
+        let initialized = false;
+        let toredown = false;
+        const server = hapi.Server();
+        await server.register(plugin);
+        const service = [
+            {
+                scope: 'sqs',
+                services: [
+                    {
+                        name: 'initialize',
+                        method() {
+                            initialized = true;
+                        },
+                    },
+                    {
+                        name: 'teardown',
+                        method() {
+                            toredown = true;
+                        },
+                    },
+                ],
+            },
+        ];
+        server.registerServiceMethods(service);
+
+        await server.initialize();
+
+        await server.stop();
+
+        initialized.should.equal(true);
+        toredown.should.equal(true);
     });
 
     it('throws when scope is not provided', async () => {
