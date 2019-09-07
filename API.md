@@ -30,22 +30,20 @@ Example:
     
     const service = {
       scope: 'vendors',
-      context: { models: this.server.models },
+      context: { Vendors: this.server.models().Vendors },
       services: [
         {
           name: 'create',
           method(payload) {
-            const { Vendors } = this.models();
             
-            return Vendors.query().create(payload);
+            return this.Vendors.query().create(payload);
           }
         },
         {
           name: 'fetchVendor',
           method(id) {
-            const { Vendors } = this.models();
             
-            return Vendors.query().select('*').where('id', id);
+            return this.Vendors.query().select('*').where('id', id);
           },
           cache: {
             expiresIn: 3400000,
@@ -62,7 +60,19 @@ Example:
  
 **`server.services(all)`**
 
-Returns services namespaced under their respective scopes. The service scopes that are available on this objects are only those
+Returns services namespaced under their respective scopes. The service scopes that are available on this object are only those
 registered by server or any plugins for which server is an ancestor (e.g. if server has registered a plugin that registers services).
 
 - `all`: A boolean, when truthy it will return every service registered with the hapi server– across all plugins.
+
+Example:
+```js
+module.exports = (request) => {
+  const { query, server } = request;
+  const { id } = query;
+  
+  const vendorServices = server.services().vendors;
+  
+  return vendorServices.fetchVendor(id);
+}
+```
