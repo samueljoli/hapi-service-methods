@@ -1,15 +1,14 @@
 # API Reference
 
-## Registration
-
 ## Decorations
 
 ### Server
-**`server.registerServiceMethods(config)`**
+
+#### `server.registerServiceMethods([serviceconfig])`
 
 Registers services to your hapi server.
 
-- `config`: An object or array of objects with the following:
+- `serviceconfig`: An object or array of objects with the following:
   - `scope`: A string representing the namespace that services will be scoped to. This needs to be unique across all registered services. Will throw if there is a scope collision.
   - `context`: An object that will be bound to the `this` context of all provided services in this config.
   - `services`: An array of objects with the following:
@@ -58,7 +57,7 @@ Example:
 ```
 
  
-**`server.services(all)`**
+#### `server.services([all])`
 
 Returns services namespaced under their respective scopes. The service scopes that are available on this object are only those
 registered by server or any plugins for which server is an ancestor (e.g. if server has registered a plugin that registers services).
@@ -76,3 +75,15 @@ module.exports = (request) => {
   return vendorServices.fetchVendor(id);
 }
 ```
+
+### Request
+
+#### `request.services([all])`
+
+See [`server.services()`](#serverservicesall), where `server` is the one in which the `request`'s route was declared (i.e. based upon `request.route.realm`).
+
+### Response toolkit decorations
+
+#### `h.services([all])`
+
+See [`server.services()`](#serverservicesall), where `server` is the one in which the corresponding route or server extension was declared (i.e. based upon `h.realm`).
