@@ -12,15 +12,14 @@
   "author": "Samuel Joli",
   "license": "ISC",
   "devDependencies": {
+    "@hapi/eslint-config-hapi": "12.2.0",
     "@hapi/eslint-plugin-hapi": "4.3.4",
     "@hapi/hapi": "18.3.2",
     "@hapi/lab": "20.1.0",
     "@hapi/rule-scope-start": "2.2.0",
     "chai": "4.2.0",
     "chai-as-promised": "7.1.1",
-    "eslint": "6.1.0",
-    "eslint-config-airbnb-base": "14.0.0",
-    "eslint-plugin-import": "2.18.2"
+    "eslint": "6.1.0"
   },
   "dependencies": {
     "@hapi/joi": "15.1.1",
