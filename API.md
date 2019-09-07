@@ -82,8 +82,32 @@ module.exports = (request) => {
 
 See [`server.services()`](#serverservicesall), where `server` is the one in which the `request`'s route was declared (i.e. based upon `request.route.realm`).
 
+Example:
+```js
+module.exports = (request) => {
+  const { query } = request;
+  const { id } = query;
+  
+  const vendorServices = request.services().vendors;
+  
+  return vendorServices.fetchVendor(id);
+}
+```
+
 ### Response toolkit decorations
 
 #### `h.services([all])`
 
 See [`server.services()`](#serverservicesall), where `server` is the one in which the corresponding route or server extension was declared (i.e. based upon `h.realm`).
+
+Example:
+```js
+module.exports = (request, h) => {
+  const { query } = request;
+  const { id } = query;
+  
+  const vendorServices = h.services().vendors;
+  
+  return vendorServices.fetchVendor(id);
+}
+```
