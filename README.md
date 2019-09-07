@@ -10,4 +10,4 @@ folks responsible for [hapipal](https://github.com/hapipal). This library was bu
 If you perfer or don't mind Classes then I'd recommend you use [schmervice](https://github.com/hapipal/schmervice).
 
 ## Usage
-> See the [API Reference]()
+> See the [API Reference](https://github.com/Samueljoli/hapi-service-methods/blob/master/API.md)
