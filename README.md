@@ -1,6 +1,6 @@
 # hapi-service-methods
 
-A function based approach for a service layer for hapi.
+A functional alternative to [schmervice](https://github.com/hapipal/schmervice).
 
 ## Inspiration
 
