@@ -13,6 +13,8 @@ Registers services to your hapi server.
   - `context`: An object that will be bound to the `this` context of all provided services in this config.
   - `services`: An array of objects with the following:
     - `name`: A string representing service name
+      - When name of **initialize** is provided this will be called during server initialization via [onPreStart server extension](https://github.com/hapijs/hapi/blob/master/API.md#-serverextevents).
+      - When name of **teardown** is provided this will be called during server stop via [onPostStop server extension](https://github.com/hapijs/hapi/blob/master/API.md#-serverextevents).
     - `method`: A function representing the service implementation.
     - `cache`: An object `{ expiresIn, generateTimeout }` as detailed in the [server method options](https://github.com/hapijs/hapi/blob/master/API.md#server.method()) documentation.
 
