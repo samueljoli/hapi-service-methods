@@ -14,7 +14,7 @@
   "devDependencies": {
     "@hapi/eslint-config-hapi": "12.2.0",
     "@hapi/eslint-plugin-hapi": "4.3.4",
-    "@hapi/hapi": "18.3.2",
+    "@hapi/hapi": "20.0.0",
     "@hapi/lab": "20.1.0",
     "@hapi/rule-scope-start": "2.2.0",
     "chai": "4.2.0",
